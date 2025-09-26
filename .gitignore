@@ -1,0 +1,83 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Packaging / build artifacts
+build/
+dist/
+sdist/
+develop-eggs/
+downloads/
+.eggs/
+*.egg-info/
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+junit.xml
+
+# Type checker caches
+.mypy_cache/
+.pytype/
+
+# Ruff cache
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDEs and editors
+.idea/
+# Keep .vscode tracked (settings are committed);
+# uncomment to ignore VS Code local settings:
+# .vscode/
+
+# PyBuilder
+target/
+
+# MkDocs
+site/
+
+# Environment files
+.env
+.env.*
+*.env
+
+# App artifacts / data
+models/
+!models/.gitkeep
+data/uploads/
+data/logs/
+
+# Streamlit
+.streamlit/
+
