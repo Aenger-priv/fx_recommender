@@ -1,0 +1,1 @@
+{"input_dim": 11, "output_dim": 5, "hidden": [128, 64], "dropout": 0.2, "seed": 42}

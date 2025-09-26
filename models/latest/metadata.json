@@ -1,0 +1,27 @@
+{
+  "num_features": [
+    "size",
+    "volatility"
+  ],
+  "cat_features": [
+    "currency_pair",
+    "time_of_day"
+  ],
+  "strategy_map": {
+    "0": 0,
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4
+  },
+  "strategy_names": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "alpha": 9.0,
+  "val_loss": 0.0034914661664515734,
+  "test_loss": 0.0046886177733540535
+}

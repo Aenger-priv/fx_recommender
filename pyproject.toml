@@ -1,0 +1,50 @@
+[project]
+name = "meagent"
+version = "0.1.0"
+description = "NumPy-based FX strategy recommender with time-aware training and MC Dropout."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "numpy>=2.1,<3.0",
+]
+
+[project.scripts]
+fxrec = "main:main"
+fxrec-api = "src.api:run"
+
+[dependency-groups]
+dev = [
+  "black>=24.8.0",
+  "ruff>=0.6.0",
+  "mypy>=1.11.0",
+  "pre-commit>=3.7.0",
+]
+app = [
+  "streamlit>=1.37.0",
+]
+serve = [
+  "fastapi>=0.115.0",
+  "uvicorn>=0.30.0",
+  "pydantic>=2.8.0",
+]
+
+[tool.black]
+  line-length = 88
+  target-version = ["py313"]
+
+  [tool.ruff]
+  line-length = 88
+  target-version = "py313"
+
+  [tool.ruff.lint]
+  select = ["E", "F", "W", "I", "N", "B"]
+  ignore = ["E203", "E501"]  # match Black
+
+[tool.mypy]
+python_version = "3.13"
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
+no_implicit_optional = true
+strict_optional = true
+ignore_missing_imports = true

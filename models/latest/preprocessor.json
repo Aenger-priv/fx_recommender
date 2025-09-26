@@ -1,0 +1,1 @@
+{"num_features": ["size", "volatility"], "cat_features": ["currency_pair", "time_of_day"], "num_stats": {"size": [628.4166259765625, 325.15655517578125], "volatility": [0.11271299421787262, 0.04496731609106064]}, "cat_vocab": {"currency_pair": ["AUD/USD", "EUR/USD", "GBP/USD", "USD/CAD", "USD/JPY"], "time_of_day": ["afternoon", "midday", "morning", "pre-close"]}}
