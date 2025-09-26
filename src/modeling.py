@@ -8,7 +8,7 @@ non-stationary settings via time-aware training in the surrounding pipeline.
 """
 
 from dataclasses import dataclass
-from typing import List, Tuple, Dict, Any
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 

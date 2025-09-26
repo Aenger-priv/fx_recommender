@@ -6,12 +6,11 @@ where the predicted top strategy had an observed reward), top-1 accuracy among
 observed strategies, and regret statistics based on realized rewards.
 """
 
-import json
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 import numpy as np
 
-from .data import load_dataset, split_by_time, latest_date, Preprocessor, build_xyw
+from .data import build_xyw, latest_date, load_dataset, split_by_time
 from .predict import load_artifacts
 
 
