@@ -22,7 +22,6 @@ from pydantic import BaseModel, Field
 
 from .predict import load_artifacts, predict_context
 
-
 DEFAULT_MODEL_DIR = os.environ.get("FXREC_MODEL_DIR", "models/latest")
 
 
@@ -60,12 +59,14 @@ def predict(req: PredictRequest):
     try:
         artifacts, meta = _cached_load(model_dir)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to load model: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to load model: {e}") from e
     try:
-        result = predict_context(artifacts, meta, req.attributes, mc_passes=req.mc_passes)
+        result = predict_context(
+            artifacts, meta, req.attributes, mc_passes=req.mc_passes
+        )
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Prediction failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Prediction failed: {e}") from e
 
 
 @app.post("/reload")
@@ -85,4 +86,3 @@ def run():
     host = os.environ.get("FXREC_HOST", "0.0.0.0")
     port = int(os.environ.get("FXREC_PORT", "8000"))
     uvicorn.run("src.api:app", host=host, port=port, reload=False)
-
