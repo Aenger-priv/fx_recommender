@@ -69,7 +69,9 @@ def train_and_save(
     latest = latest_date(data)
 
     # Fit preprocessor on train set contexts
-    preproc = Preprocessor(num_features, cat_features)
+    # Use log1p transform for heavy-tailed 'size' (if present) and clip z-scores.
+    numeric_transforms = {"size": "log1p"} if "size" in num_features else {}
+    preproc = Preprocessor(num_features, cat_features, z_clip=5.0, numeric_transforms=numeric_transforms)
     preproc.fit([ex.get("context", {}) for ex in train_ex])
 
     # Build XY and sample weights
