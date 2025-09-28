@@ -20,6 +20,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 import streamlit as st
+import streamlit.components.v1 as components
 
 from src.evaluate import evaluate_and_report
 from src.predict import load_artifacts, predict_context
@@ -333,18 +334,118 @@ def page_eval():
             st.error(f"Evaluation failed: {e}")
 
 
+def _mlp_svg(input_dim: int, hidden: List[int], output_dim: int, dropout: float) -> str:
+    """Generate a simple inline SVG showing the MLP architecture."""
+    layers = [f"Input\nD={input_dim}"] + [f"Hidden {i+1}\n{h} units\nReLU + Dropout {dropout:.2f}" for i, h in enumerate(hidden)] + [f"Output\nS={output_dim}"]
+    box_w, box_h = 180, 90
+    gap = 40
+    n = len(layers)
+    svg_w = n * box_w + (n - 1) * gap + 40
+    svg_h = 180
+    start_x = 20
+    y = (svg_h - box_h) // 2
+
+    def rect(x, label):
+        lines = label.split("\n")
+        t = "".join(
+            f"<tspan x='{x + box_w/2}' dy='{14 if i==0 else 16}'>{line}</tspan>" for i, line in enumerate(lines)
+        )
+        return (
+            f"<rect x='{x}' y='{y}' rx='8' ry='8' width='{box_w}' height='{box_h}' fill='#EEF2FF' stroke='#3B82F6' stroke-width='2'/>"
+            f"<text x='{x + box_w/2}' y='{y + 30}' font-family='Inter, sans-serif' font-size='13' text-anchor='middle' fill='#1F2937'>{t}</text>"
+        )
+
+    def arrow(x1, x2):
+        ay = y + box_h / 2
+        return (
+            f"<line x1='{x1}' y1='{ay}' x2='{x2}' y2='{ay}' stroke='#6B7280' stroke-width='2' marker-end='url(#arrow)'/>"
+        )
+
+    # Build SVG
+    parts = [
+        f"<svg xmlns='http://www.w3.org/2000/svg' width='{svg_w}' height='{svg_h}' viewBox='0 0 {svg_w} {svg_h}'>",
+        "<defs><marker id='arrow' viewBox='0 0 10 10' refX='10' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'>",
+        "<path d='M 0 0 L 10 5 L 0 10 z' fill='#6B7280'/></marker></defs>",
+    ]
+    xs = []
+    x = start_x
+    for label in layers:
+        parts.append(rect(x, label))
+        xs.append(x)
+        x += box_w + gap
+    for i in range(len(xs) - 1):
+        parts.append(arrow(xs[i] + box_w, xs[i + 1]))
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def page_model():
+    st.header("Model Architecture")
+    st.caption("Visual overview and notation of the MLP scoring pipeline.")
+
+    model_dir = st.text_input(
+        "Model directory",
+        value=st.session_state.get("model_dir", DEFAULT_MODEL_DIR),
+        key="model_model_dir",
+        help="Directory containing model.json, weights.npz, preprocessor.json, metadata.json.",
+    )
+    show = st.button("Load model and show diagram", type="primary", key="btn_model_show")
+
+    if show:
+        try:
+            (preproc, model), meta = _cached_load_artifacts(model_dir)
+            hidden = list(model.cfg.hidden)
+            dropout = float(model.cfg.dropout)
+            input_dim = int(model.cfg.input_dim)
+            output_dim = int(model.cfg.output_dim)
+
+            st.subheader("Architecture")
+            svg = _mlp_svg(input_dim=input_dim, hidden=hidden, output_dim=output_dim, dropout=dropout)
+            components.html(svg, height=220)
+
+            st.subheader("Notation and flow")
+            st.markdown(
+                """
+                - Inputs: `X ∈ R^{N×D}` from standardized numerics + one‑hot categoricals.
+                - Layer 1: `Z₁ = X W₁ + b₁`, `H₁ = ReLU(Z₁)`, `Ĥ₁ = H₁ ⊙ M₁` (dropout mask during training/MC).
+                - Layer 2..k: repeat `Zᵢ = Ĥᵢ₋₁ Wᵢ + bᵢ`, `Hᵢ = ReLU(Zᵢ)`, apply dropout.
+                - Output: `Ŷ = Ĥ_k W_out + b_out` with `S` strategy scores (higher = better).
+                - Uncertainty: MC Dropout → run T stochastic passes: `μ = mean(Ŷ)`, `σ = std(Ŷ)`.
+                - Loss (training): masked MSE with recency weights `w`: `L = Σ (w ⊙ (Ŷ − Y)²) / Σ w`.
+                """
+            )
+
+            with st.expander("Feature breakdown"):
+                num_feats = preproc.num_features
+                cat_feats = preproc.cat_features
+                cat_dims = {f: len(preproc.cat_vocab.get(f, [])) for f in cat_feats}
+                st.write(
+                    {
+                        "input_dim": input_dim,
+                        "numeric_features": num_feats,
+                        "categorical_features": cat_feats,
+                        "categorical_dims": cat_dims,
+                        "output_strategies": meta.get("strategy_names", []),
+                    }
+                )
+        except Exception as e:
+            st.error(f"Failed to load model: {e}")
+
+
 def main():
     st.set_page_config(page_title=APP_TITLE, layout="wide")
     st.title(APP_TITLE)
     st.markdown("Use the tabs below to predict, train, and evaluate.")
 
-    tabs = st.tabs(["Predict", "Train", "Evaluate"])
+    tabs = st.tabs(["Predict", "Train", "Evaluate", "Model"])
     with tabs[0]:
         page_predict()
     with tabs[1]:
         page_train()
     with tabs[2]:
         page_eval()
+    with tabs[3]:
+        page_model()
 
 
 if __name__ == "__main__":

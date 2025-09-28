@@ -112,24 +112,57 @@ def split_by_time(
 class Preprocessor:
     """NumPy preprocessor: standardize numeric and one-hot encode categoricals.
 
+    Enhancements:
+    - Optional per-feature numeric transforms (e.g., log1p for heavy-tailed 'size').
+    - Clip standardized numeric z-scores to reduce blow-ups for out-of-range inputs.
+
     Stores fitted statistics and vocabularies for deterministic transformation
     of new contexts.
     """
 
-    def __init__(self, num_features: List[str], cat_features: List[str]):
-        """Initialize the preprocessor with feature name lists."""
+    def __init__(
+        self,
+        num_features: List[str],
+        cat_features: List[str],
+        z_clip: float = 5.0,
+        numeric_transforms: Dict[str, str] | None = None,
+    ):
+        """Initialize the preprocessor with feature name lists.
+
+        Args:
+            num_features: Names of numeric features to standardize.
+            cat_features: Names of categorical features to one-hot encode.
+            z_clip: Clip standardized numeric values to [-z_clip, z_clip].
+            numeric_transforms: Mapping feature -> transform name; supported:
+                "standard" (default) or "log1p" (applies log1p(max(0, x))).
+        """
         self.num_features = list(num_features)
         self.cat_features = list(cat_features)
+        self.z_clip = float(z_clip)
+        self.numeric_transforms: Dict[str, str] = dict(numeric_transforms or {})
         self.num_stats: Dict[str, Tuple[float, float]] = {}
         self.cat_vocab: Dict[str, List[str]] = {}
         self.cat_index: Dict[str, Dict[str, int]] = {}
 
     def fit(self, contexts: List[Dict[str, Any]]):
-        """Fit normalization stats and categorical vocabularies from contexts."""
+        """Fit normalization stats and categorical vocabularies from contexts.
+
+        Numeric stats (mean/std) are computed after applying any configured
+        per-feature transform (e.g., log1p for heavy-tailed features).
+        """
         for f in self.num_features:
-            arr = np.array([float(c.get(f, 0.0)) for c in contexts], dtype=np.float32)
+            t = self.numeric_transforms.get(f, "standard")
+            vals: List[float] = []
+            for c in contexts:
+                x = float(c.get(f, 0.0))
+                if t == "log1p":
+                    x = float(np.log1p(max(0.0, x)))
+                vals.append(x)
+            arr = np.array(vals, dtype=np.float32)
             mu = float(np.mean(arr))
-            sigma = float(np.std(arr) + 1e-6)
+            sigma = float(np.std(arr) + 1e-8)
+            if sigma == 0.0:
+                sigma = 1.0
             self.num_stats[f] = (mu, sigma)
         for f in self.cat_features:
             vals = [str(c.get(f, "")) for c in contexts]
@@ -154,8 +187,17 @@ class Preprocessor:
         num_block = []
         for f in self.num_features:
             mu, sigma = self.num_stats[f]
-            arr = np.array([float(c.get(f, 0.0)) for c in contexts], dtype=np.float32)
+            t = self.numeric_transforms.get(f, "standard")
+            vals: List[float] = []
+            for c in contexts:
+                x = float(c.get(f, 0.0))
+                if t == "log1p":
+                    x = float(np.log1p(max(0.0, x)))
+                vals.append(x)
+            arr = np.array(vals, dtype=np.float32)
             arr = (arr - mu) / sigma
+            if self.z_clip > 0:
+                arr = np.clip(arr, -self.z_clip, self.z_clip, out=arr)
             num_block.append(arr.reshape(n, 1))
         X_num = (
             np.concatenate(num_block, axis=1)
@@ -195,12 +237,19 @@ class Preprocessor:
             "cat_features": self.cat_features,
             "num_stats": self.num_stats,
             "cat_vocab": self.cat_vocab,
+            "z_clip": self.z_clip,
+            "numeric_transforms": self.numeric_transforms,
         }
 
     @staticmethod
     def from_dict(d: Dict[str, Any]):
         """Reconstruct a fitted preprocessor from a dict produced by to_dict()."""
-        p = Preprocessor(d["num_features"], d["cat_features"])
+        p = Preprocessor(
+            d["num_features"],
+            d["cat_features"],
+            z_clip=float(d.get("z_clip", 5.0)),
+            numeric_transforms=d.get("numeric_transforms", {}),
+        )
         p.num_stats = {
             k: (float(v[0]), float(v[1])) for k, v in d.get("num_stats", {}).items()
         }

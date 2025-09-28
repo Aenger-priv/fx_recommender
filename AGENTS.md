@@ -73,6 +73,7 @@ Type checking and hooks
 ## Data & Modeling Details
 - Dataset format: a list of items each with `context: {..}` and `rewards: {strategy_id: reward}`; `context.date` (YYYY-MM-DD) is used for ordering/weights and excluded from features by default.
 - Preprocessing: standardize numeric features; one‑hot encode categoricals.
+  - Numeric transforms: `size` uses `log1p` by default; standardized numerics are clipped to ±5σ to reduce OOD blow‑ups.
   - Unseen categorical values map to an all‑zeros vector (no learned fallback bucket yet). Consider adding an `__UNK__` bucket if you touch this area.
 - Targets: multi‑output rewards (one per strategy). Missing rewards are masked via element‑wise weights.
 - Loss: masked MSE; training uses recency weights row‑wise (controlled by `alpha`).
